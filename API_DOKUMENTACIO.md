@@ -21,7 +21,7 @@ http://localhost/Termekertekelesek/Termekertekelesek/public/api
 
 ## 📌 JOGOSULTSÁGI SZINTEK
 
-- 🌐 **Nyilvános**: Nincs szükség autentikációra
+- 🌐 **Nyilvános**: Nincs szükség autentikációra (CSAK regisztráció és login)
 - 🔑 **Autentikált**: Bearer token szükséges
 - 👑 **Admin**: Bearer token + admin jogosultság szükséges
 
@@ -166,10 +166,10 @@ Authorization: Bearer {token}
 
 ## 1. TERMÉKEK (Products)
 
-### 1.1 Összes termék lekérése 🌐
+### 1.1 Összes termék lekérése 🔑
 **GET** `/products`
 
-**Jogosultság:** Nyilvános
+**Jogosultság:** Autentikált (Bearer token)
 
 **Válasz (200):**
 ```json
@@ -233,10 +233,10 @@ Authorization: Bearer {admin_token}
 
 ---
 
-### 1.3 Egy termék lekérése 🌐
+### 1.3 Egy termék lekérése 🔑
 **GET** `/products/{id}`
 
-**Jogosultság:** Nyilvános
+**Jogosultság:** Autentikált (Bearer token)
 
 **Példa:** `/products/1`
 
@@ -301,10 +301,10 @@ Authorization: Bearer {admin_token}
 
 ---
 
-### 1.6 Termékhez tartozó értékelések 🌐
+### 1.6 Termékhez tartozó értékelések 🔑
 **GET** `/products/{id}/reviews`
 
-**Jogosultság:** Nyilvános
+**Jogosultság:** Autentikált (Bearer token)
 
 **Példa:** `/products/1/reviews`
 
@@ -332,10 +332,10 @@ Authorization: Bearer {admin_token}
 
 ## 2. ÉRTÉKELÉSEK (Reviews)
 
-### 2.1 Összes értékelés lekérése 🌐
+### 2.1 Összes értékelés lekérése 🔑
 **GET** `/reviews`
 
-**Jogosultság:** Nyilvános
+**Jogosultság:** Autentikált (Bearer token)
 
 **Válasz (200):**
 ```json
@@ -418,10 +418,10 @@ Authorization: Bearer {token}
 
 ---
 
-### 2.3 Egy értékelés lekérése 🌐
+### 2.3 Egy értékelés lekérése 🔑
 **GET** `/reviews/{id}`
 
-**Jogosultság:** Nyilvános
+**Jogosultság:** Autentikált (Bearer token)
 
 **Példa:** `/reviews/1`
 
@@ -2315,18 +2315,15 @@ Authorization: Bearer {admin_token}
 ### Publikus végpontok (nincs autentikáció szükséges):
 - `POST /register` - Regisztráció
 - `POST /login` - Bejelentkezés
+
+### Autentikált végpontok (Bearer token szükséges):
+- `POST /logout` - Kijelentkezés
+- `GET /user` - Saját profil
 - `GET /products` - Termékek listázása
 - `GET /products/{id}` - Egy termék megtekintése
 - `GET /products/{id}/reviews` - Termék értékeléseinek megtekintése
 - `GET /reviews` - Értékelések listázása
 - `GET /reviews/{id}` - Egy értékelés megtekintése
-
-### Autentikált végpontok (Bearer token szükséges):
-- `POST /logout` - Kijelentkezés
-- `GET /user` - Saját profil
-- `POST /products` - Termék létrehozása
-- `PUT/PATCH /products/{id}` - Termék módosítása
-- `DELETE /products/{id}` - Termék törlése
 - `POST /reviews` - Értékelés létrehozása
 - `PUT/PATCH /reviews/{id}` - Értékelés módosítása
 - `DELETE /reviews/{id}` - Értékelés törlése
@@ -2341,10 +2338,10 @@ Authorization: Bearer {admin_token}
 
 **Termékek:**
 - `GET /admin/products` - Összes termék értékelésekkel (lapozva)
-- `POST /admin/products` - Új termék létrehozása
+- `POST /admin/products` - Új termék létrehozása (VAGY: POST /products admin tokennel)
 - `GET /admin/products/{id}` - Egy termék megtekintése értékelésekkel
-- `PUT/PATCH /admin/products/{id}` - Termék módosítása
-- `DELETE /admin/products/{id}` - Termék törlése
+- `PUT/PATCH /admin/products/{id}` - Termék módosítása (VAGY: PUT/PATCH /products/{id} admin tokennel)
+- `DELETE /admin/products/{id}` - Termék törlése (VAGY: DELETE /products/{id} admin tokennel)
 
 **Értékelések:**
 - `GET /admin/reviews` - Összes értékelés (lapozva)
