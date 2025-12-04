@@ -9,41 +9,61 @@ use App\Http\Controllers\Api\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Api\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Api\Admin\ReviewController as AdminReviewController;
 
-// Auth routes (nyilvános)
+// ==========================================
+// NYILVÁNOS VÉGPONTOK (Public - NO AUTH)
+// ==========================================
+
+// Auth routes (CSAK ezek nyilvánosak)
 Route::post('register', [AuthController::class, 'register']);
 Route::post('login', [AuthController::class, 'login']);
 
-// Product routes (nyilvános olvasás)
-Route::apiResource('products', ProductController::class)->only(['index', 'show']);
+// ==========================================
+// VÉDETT VÉGPONTOK (AUTH REQUIRED)
+// ==========================================
 
-// Review routes (nyilvános olvasás)
-Route::apiResource('reviews', ReviewController::class)->only(['index', 'show']);
-
-// Védett route-ok (autentikáció szükséges)
 Route::middleware('auth:sanctum')->group(function () {
+    
+    // Auth
     Route::post('logout', [AuthController::class, 'logout']);
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
 
-    // Reviews írás/módosítás/törlés (sima userek)
-    Route::apiResource('reviews', ReviewController::class)->except(['index', 'show']);
+    // Products - olvasás (autentikált felhasználók)
+    Route::get('products', [ProductController::class, 'index']);
+    Route::get('products/{id}', [ProductController::class, 'show']);
+    
+    // Termékhez tartozó értékelések (autentikált felhasználók)
+    Route::get('products/{id}/reviews', function ($id) {
+        $product = \App\Models\Products::with('reviews.user')->findOrFail($id);
+        return response()->json($product->reviews);
+    });
 
-    // Admin route-ok (csak admin jogosultság)
+    // Reviews - olvasás (autentikált felhasználók)
+    Route::get('reviews', [ReviewController::class, 'index']);
+    Route::get('reviews/{id}', [ReviewController::class, 'show']);
+
+    // Reviews - írás/módosítás/törlés (autentikált felhasználók)
+    Route::post('reviews', [ReviewController::class, 'store']);
+    Route::put('reviews/{id}', [ReviewController::class, 'update']);
+    Route::patch('reviews/{id}', [ReviewController::class, 'update']);
+    Route::delete('reviews/{id}', [ReviewController::class, 'destroy']);
+
+    // ==========================================
+    // ADMIN VÉGPONTOK (Admin Only)
+    // ==========================================
+    
     Route::prefix('admin')->middleware('admin')->group(function () {
         Route::apiResource('users', AdminUserController::class);
         Route::apiResource('products', AdminProductController::class);
         Route::apiResource('reviews', AdminReviewController::class);
     });
-});
 
-// Products írás/módosítás/törlés (CSAK admin)
-Route::middleware(['auth:sanctum', 'admin'])->group(function () {
-    Route::apiResource('products', ProductController::class)->except(['index', 'show']);
-});
-
-// Termékhez tartozó értékelések
-Route::get('products/{id}/reviews', function ($id) {
-    $product = \App\Models\Products::with('reviews.user')->findOrFail($id);
-    return response()->json($product->reviews);
+    // Products - írás/módosítás/törlés (CSAK admin)
+    Route::middleware('admin')->group(function () {
+        Route::post('products', [ProductController::class, 'store']);
+        Route::put('products/{id}', [ProductController::class, 'update']);
+        Route::patch('products/{id}', [ProductController::class, 'update']);
+        Route::delete('products/{id}', [ProductController::class, 'destroy']);
+    });
 });
