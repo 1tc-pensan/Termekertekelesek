@@ -2,7 +2,7 @@
 
 ## Base URL
 ```
-http://localhost:8000/api
+http://localhost/Termekertekelesek/Termekertekelesek/public/api
 ```
 
 ---
@@ -336,7 +336,7 @@ Content-Type: application/json
 ## 4. TESZTELÉS LÉPÉSEI POSTMAN-BEN
 
 ### 4.1 Termék létrehozása
-1. Új request: **POST** `http://localhost:8000/api/products`
+1. Új request: **POST** `http://localhost/Termekertekelesek/Termekertekelesek/public/api/products`
 2. Headers: `Content-Type: application/json`
 3. Body → raw → JSON:
 ```json
@@ -356,7 +356,7 @@ Laravel alapértelmezetten nem biztosít user regisztrációs endpoint-ot az API
 ```
 
 ### 4.3 Értékelés létrehozása
-1. Új request: **POST** `http://localhost:8000/api/reviews`
+1. Új request: **POST** `http://localhost/Termekertekelesek/Termekertekelesek/public/api/reviews`
 2. Headers: `Content-Type: application/json`
 3. Body → raw → JSON:
 ```json
@@ -370,5 +370,5 @@ Laravel alapértelmezetten nem biztosít user regisztrációs endpoint-ot az API
 4. Send
 
 ### 4.4 Termék értékeléseinek lekérése
-1. Új request: **GET** `http://localhost:8000/api/products/1/reviews`
+1. Új request: **GET** `http://localhost/Termekertekelesek/Termekertekelesek/public/api/products/1/reviews`
 2. Send
