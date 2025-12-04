@@ -1115,15 +1115,23 @@ php artisan test --filter=AuthTest
 ```
 
 **Várt kimenet:**
+
+![PHPUnit Teszt Eredmények](https://i.imgur.com/YourImageURL.png)
+
 ```
-   PASS  Tests\Feature\AuthTest
-  ✓ user can register
-  ✓ user can login
-  ✓ user can logout
-  ... (36 teszt összesen)
+   PASS  Tests\Feature\ReviewTest
+  ✓ authenticated user can list reviews
+  ✓ unauthenticated user cannot list reviews
+  ✓ authenticated user can create review
+  ✓ unauthenticated user cannot create review
+  ✓ user can update review
+  ✓ user can delete review
+  ✓ authenticated user can get product reviews
+  ✓ review rating must be between 1 and 5
+  ✓ review requires rating
 
   Tests:    36 passed (223 assertions)
-  Duration: 1.35s
+  Duration: 1.23s
 ```
 
 ---
