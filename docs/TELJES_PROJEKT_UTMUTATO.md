@@ -1464,7 +1464,323 @@ if (pm.response.code === 200) {
 
 ---
 
-## 📁 XV. PROJEKT STRUKTÚRA
+## 🗄️ XV. ADATBÁZIS TERV
+
+### Táblák és Kapcsolatok
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     ADATBÁZIS SÉMA DIAGRAM                      │
+└─────────────────────────────────────────────────────────────────┘
+
+                    ┌──────────────────┐
+                    │      USERS       │
+                    ├──────────────────┤
+                    │ id (PK)          │
+                    │ name             │
+                    │ email (UNIQUE)   │
+                    │ password         │
+                    │ is_admin         │
+                    │ created_at       │
+                    │ updated_at       │
+                    └──────────────────┘
+                            │
+                            │ 1
+                            │
+                ┌───────────┴───────────┐
+                │                       │
+             N  │                       │ N
+                │                       │
+    ┌───────────▼──────────┐  ┌────────▼─────────┐
+    │     PRODUCTS         │  │     REVIEWS      │
+    ├──────────────────────┤  ├──────────────────┤
+    │ id (PK)              │  │ id (PK)          │
+    │ name                 │  │ user_id (FK)     │
+    │ description          │  │ product_id (FK)  │
+    │ price                │  │ rating           │
+    │ created_at           │  │ comment          │
+    │ updated_at           │  │ created_at       │
+    └──────────────────────┘  │ updated_at       │
+                │              └──────────────────┘
+                │ 1                     │
+                │                       │
+                └───────────┬───────────┘
+                            │ N
+
+Kapcsolatok:
+  • users → reviews: 1:N (egy user több értékelést is írhat)
+  • products → reviews: 1:N (egy termékhez több értékelés tartozhat)
+```
+
+### Részletes Tábla Leírások
+
+#### 1. **users** tábla
+```sql
+CREATE TABLE users (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    is_admin BOOLEAN DEFAULT 0,
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL,
+    
+    INDEX idx_email (email),
+    INDEX idx_is_admin (is_admin)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+**Mezők:**
+- `id`: Elsődleges kulcs, auto-increment
+- `name`: Felhasználó neve (max 255 karakter)
+- `email`: E-mail cím, egyedi, kötelező
+- `password`: Bcrypt hash-elt jelszó
+- `is_admin`: Admin jogosultság (0/1)
+- `created_at`: Létrehozás időbélyegzője
+- `updated_at`: Utolsó módosítás időbélyegzője
+
+**Indexek:**
+- Email gyors kereséséhez (login)
+- Admin szűréshez
+
+---
+
+#### 2. **products** tábla
+```sql
+CREATE TABLE products (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT NULL,
+    price DECIMAL(10, 2) NOT NULL,
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL,
+    
+    INDEX idx_price (price),
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+**Mezők:**
+- `id`: Elsődleges kulcs, auto-increment
+- `name`: Termék neve, kötelező
+- `description`: Termék leírása (opcionális, TEXT típus)
+- `price`: Ár (2 tizedesjegy pontossággal, pl. 1999.99)
+- `created_at`: Létrehozás időbélyegzője
+- `updated_at`: Utolsó módosítás időbélyegzője
+
+**Indexek:**
+- Ár szerinti rendezéshez/szűréshez
+- Dátum szerinti rendezéshez
+
+---
+
+#### 3. **reviews** tábla
+```sql
+CREATE TABLE reviews (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT UNSIGNED NOT NULL,
+    product_id BIGINT UNSIGNED NOT NULL,
+    rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    comment TEXT NULL,
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL,
+    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    
+    INDEX idx_user_id (user_id),
+    INDEX idx_product_id (product_id),
+    INDEX idx_rating (rating),
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+**Mezők:**
+- `id`: Elsődleges kulcs, auto-increment
+- `user_id`: Felhasználó azonosító (FK → users.id)
+- `product_id`: Termék azonosító (FK → products.id)
+- `rating`: Értékelés 1-5 skálán (validálva)
+- `comment`: Szöveges vélemény (opcionális)
+- `created_at`: Létrehozás időbélyegzője
+- `updated_at`: Utolsó módosítás időbélyegzője
+
+**Idegen kulcsok:**
+- `user_id` → `users.id` (CASCADE törlés)
+- `product_id` → `products.id` (CASCADE törlés)
+
+**Indexek:**
+- Felhasználó értékeléseinek lekérdezéséhez
+- Termék értékeléseinek lekérdezéséhez
+- Értékelés szerinti szűréshez
+- Dátum szerinti rendezéshez
+
+**Validáció:**
+- Rating CHECK constraint: 1 ≤ rating ≤ 5
+
+---
+
+#### 4. **personal_access_tokens** tábla (Laravel Sanctum)
+```sql
+CREATE TABLE personal_access_tokens (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tokenable_type VARCHAR(255) NOT NULL,
+    tokenable_id BIGINT UNSIGNED NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    token VARCHAR(64) NOT NULL UNIQUE,
+    abilities TEXT NULL,
+    last_used_at TIMESTAMP NULL,
+    expires_at TIMESTAMP NULL,
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL,
+    
+    INDEX idx_tokenable (tokenable_type, tokenable_id),
+    INDEX idx_token (token)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+**Mezők:**
+- `id`: Elsődleges kulcs
+- `tokenable_type`: Model típus (pl. "App\Models\User")
+- `tokenable_id`: User ID
+- `name`: Token neve (pl. "auth_token")
+- `token`: Egyedi hash-elt token
+- `abilities`: JSON jogosultságok (opcionális)
+- `last_used_at`: Utolsó használat időpontja
+- `expires_at`: Lejárati idő (opcionális)
+- `created_at`: Létrehozás időbélyegzője
+- `updated_at`: Módosítás időbélyegzője
+
+---
+
+### Adatbázis Kapcsolatok Részletesen
+
+#### **1:N Kapcsolat - users → reviews**
+```
+Egy felhasználó több értékelést is írhat.
+Egy értékelés pontosan egy felhasználóhoz tartozik.
+
+Példa:
+User #1 (test@example.com)
+  ├── Review #1 (Product #1, Rating: 5)
+  ├── Review #2 (Product #2, Rating: 4)
+  └── Review #3 (Product #1, Rating: 5)
+```
+
+#### **1:N Kapcsolat - products → reviews**
+```
+Egy termékhez több értékelés is tartozhat.
+Egy értékelés pontosan egy termékhez tartozik.
+
+Példa:
+Product #1 (Laptop)
+  ├── Review #1 (User #1, Rating: 5)
+  ├── Review #2 (User #2, Rating: 4)
+  └── Review #3 (User #3, Rating: 5)
+```
+
+---
+
+### Minta Adatok (Seeder)
+
+#### Users
+```
+┌────┬──────────────────────┬─────────────┬──────────┐
+│ ID │ Email                │ Name        │ Is Admin │
+├────┼──────────────────────┼─────────────┼──────────┤
+│ 1  │ admin@example.com    │ Admin User  │ 1        │
+│ 2  │ test@example.com     │ Test User   │ 0        │
+└────┴──────────────────────┴─────────────┴──────────┘
+```
+
+#### Products
+```
+┌────┬─────────────────┬──────────┬──────────────────────────┐
+│ ID │ Name            │ Price    │ Description              │
+├────┼─────────────────┼──────────┼──────────────────────────┤
+│ 1  │ Laptop          │ 299999   │ High performance laptop  │
+│ 2  │ Smartphone      │ 149999   │ Latest model smartphone  │
+│ 3  │ Headphones      │ 29999    │ Wireless headphones      │
+│ 4  │ Keyboard        │ 15999    │ Mechanical keyboard      │
+│ 5  │ Mouse           │ 8999     │ Gaming mouse             │
+└────┴─────────────────┴──────────┴──────────────────────────┘
+```
+
+#### Reviews
+```
+┌────┬─────────┬────────────┬────────┬────────────────────────┐
+│ ID │ User ID │ Product ID │ Rating │ Comment                │
+├────┼─────────┼────────────┼────────┼────────────────────────┤
+│ 1  │ 1       │ 1          │ 5      │ Excellent laptop!      │
+│ 2  │ 2       │ 1          │ 4      │ Good but expensive     │
+│ 3  │ 1       │ 2          │ 5      │ Best phone ever        │
+│ 4  │ 2       │ 3          │ 3      │ Average sound quality  │
+└────┴─────────┴────────────┴────────┴────────────────────────┘
+```
+
+---
+
+### Adatbázis Műveletek Példái
+
+#### Összetett Lekérdezések
+
+**1. Termék átlagos értékelése:**
+```sql
+SELECT 
+    p.id,
+    p.name,
+    ROUND(AVG(r.rating), 2) as average_rating,
+    COUNT(r.id) as review_count
+FROM products p
+LEFT JOIN reviews r ON p.id = r.product_id
+GROUP BY p.id, p.name;
+```
+
+**2. Felhasználó összes értékelése:**
+```sql
+SELECT 
+    u.name as user_name,
+    p.name as product_name,
+    r.rating,
+    r.comment,
+    r.created_at
+FROM reviews r
+JOIN users u ON r.user_id = u.id
+JOIN products p ON r.product_id = p.id
+WHERE u.id = 1
+ORDER BY r.created_at DESC;
+```
+
+**3. Top 5 legjobban értékelt termék:**
+```sql
+SELECT 
+    p.name,
+    ROUND(AVG(r.rating), 2) as avg_rating,
+    COUNT(r.id) as review_count
+FROM products p
+LEFT JOIN reviews r ON p.id = r.product_id
+GROUP BY p.id, p.name
+HAVING COUNT(r.id) > 0
+ORDER BY avg_rating DESC, review_count DESC
+LIMIT 5;
+```
+
+**4. Felhasználók rangsor aktivitás szerint:**
+```sql
+SELECT 
+    u.id,
+    u.name,
+    u.email,
+    COUNT(r.id) as total_reviews,
+    ROUND(AVG(r.rating), 2) as avg_rating_given
+FROM users u
+LEFT JOIN reviews r ON u.id = r.user_id
+GROUP BY u.id, u.name, u.email
+ORDER BY total_reviews DESC;
+```
+
+---
+
+## 📁 XVI. PROJEKT STRUKTÚRA
 
 ```
 Termekertekelesek/
