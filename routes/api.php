@@ -13,12 +13,21 @@ use App\Http\Controllers\Api\Admin\ReviewController as AdminReviewController;
 Route::post('register', [AuthController::class, 'register']);
 Route::post('login', [AuthController::class, 'login']);
 
+// Product routes (nyilvános olvasás)
+Route::apiResource('products', ProductController::class)->only(['index', 'show']);
+
+// Review routes (nyilvános olvasás)
+Route::apiResource('reviews', ReviewController::class)->only(['index', 'show']);
+
 // Védett route-ok (autentikáció szükséges)
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('logout', [AuthController::class, 'logout']);
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
+
+    // Reviews írás/módosítás/törlés (sima userek)
+    Route::apiResource('reviews', ReviewController::class)->except(['index', 'show']);
 
     // Admin route-ok (csak admin jogosultság)
     Route::prefix('admin')->middleware('admin')->group(function () {
@@ -28,13 +37,9 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 });
 
-// Product routes (nyilvános)
-Route::apiResource('products', ProductController::class)->only(['index', 'show']);
-
-// Review routes (nyilvános olvasás, auth írás)
-Route::apiResource('reviews', ReviewController::class)->only(['index', 'show']);
-Route::middleware('auth:sanctum')->group(function () {
-    Route::apiResource('reviews', ReviewController::class)->except(['index', 'show']);
+// Products írás/módosítás/törlés (CSAK admin)
+Route::middleware(['auth:sanctum', 'admin'])->group(function () {
+    Route::apiResource('products', ProductController::class)->except(['index', 'show']);
 });
 
 // Termékhez tartozó értékelések
