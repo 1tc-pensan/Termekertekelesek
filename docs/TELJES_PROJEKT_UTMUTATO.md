@@ -75,12 +75,6 @@ exit;
 **Szerkeszd a `.env` fájlt:**
 
 ```env
-APP_NAME=TermekErtekelesek
-APP_ENV=local
-APP_KEY=base64:XXXXX
-APP_DEBUG=true
-APP_TIMEZONE=Europe/Budapest
-APP_URL=http://localhost/Termekertekelesek/Termekertekelesek/public
 
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
@@ -89,28 +83,8 @@ DB_DATABASE=termekertekelesek
 DB_USERNAME=root
 DB_PASSWORD=
 
-BROADCAST_CONNECTION=log
-FILESYSTEM_DISK=local
-QUEUE_CONNECTION=database
-SESSION_DRIVER=database
-SESSION_LIFETIME=120
-
-CACHE_STORE=database
-CACHE_PREFIX=
 ```
 
-### 2.3 App Key Generálás
-
-```bash
-php artisan key:generate
-```
-
-**Kimenet:**
-```
-Application key set successfully.
-```
-
----
 
 ## 🔐 III. LARAVEL SANCTUM TELEPÍTÉS
 
@@ -1149,8 +1123,6 @@ php artisan test
 # Csak egy adott teszt futtatása
 php artisan test --filter=AuthTest
 
-# Verbose kimenet
-php artisan test --verbose
 ```
 
 **Várt kimenet:**
@@ -1281,42 +1253,7 @@ Content-Type: application/json
 }
 ```
 
----
-
-## 🔒 XII. BIZTONSÁGI TESZTEK
-
-### 12.1 401 Unauthorized Teszt
-
-```bash
-# Token nélkül próbálj termékeket lekérni
-curl -X GET http://localhost/Termekertekelesek/Termekertekelesek/public/api/products
-```
-
-**Várt válasz:**
-```json
-{
-    "message": "Unauthenticated."
-}
-```
-
-### 12.2 403 Forbidden Teszt
-
-```bash
-# User token-nel próbálj admin végpontot elérni
-curl -X GET http://localhost/Termekertekelesek/Termekertekelesek/public/api/admin/users \
-  -H "Authorization: Bearer {user_token}"
-```
-
-**Várt válasz:**
-```json
-{
-    "message": "Unauthorized. Admin access required."
-}
-```
-
----
-
-## 📊 XIII. HASZNOS PARANCSOK
+## 📊 XII. HASZNOS PARANCSOK
 
 ### Adatbázis Parancsok
 
@@ -1338,25 +1275,6 @@ php artisan migrate:reset
 
 # Migration státusz
 php artisan migrate:status
-```
-
-### Cache Parancsok
-
-```bash
-# Cache törlése
-php artisan cache:clear
-
-# Config cache törlése
-php artisan config:clear
-
-# Route cache törlése
-php artisan route:clear
-
-# View cache törlése
-php artisan view:clear
-
-# Összes cache törlése
-php artisan optimize:clear
 ```
 
 ### Generálás Parancsok
@@ -1387,84 +1305,7 @@ php artisan make:request RequestName
 php artisan make:test TestName
 ```
 
-### Debugging Parancsok
-
-```bash
-# Route lista
-php artisan route:list
-
-# Route keresése
-php artisan route:list --path=api
-
-# Tinker (Laravel REPL)
-php artisan tinker
-
-# Event lista
-php artisan event:list
-
-# Queue működése
-php artisan queue:work
-
-# Schedule parancsok listája
-php artisan schedule:list
-```
-
----
-
-## 🐛 XIV. HIBAELHÁRÍTÁS
-
-### Gyakori Hibák
-
-**1. "Class not found" hiba**
-
-```bash
-# Composer autoload újragenerálása
-composer dump-autoload
-```
-
-**2. "SQLSTATE[HY000] [1045] Access denied"**
-
-Ellenőrizd a `.env` fájlban:
-```env
-DB_USERNAME=root
-DB_PASSWORD=
-```
-
-**3. "Base table or view not found"**
-
-```bash
-# Migrations újrafuttatása
-php artisan migrate:fresh --seed
-```
-
-**4. "419 Page Expired" CSRF hiba**
-
-API hívásokban **NE használj** CSRF tokent, csak Bearer tokent.
-
-**5. "Route [login] not defined"**
-
-✅ Megoldva a `bootstrap/app.php`-ban:
-```php
-$exceptions->render(function (AuthenticationException $e, Request $request) {
-    if ($request->is('api/*')) {
-        return response()->json(['message' => 'Unauthenticated.'], 401);
-    }
-});
-```
-
-**6. Token nem mentődik Postman-ben**
-
-Ellenőrizd a Test script-et:
-```javascript
-if (pm.response.code === 200) {
-    var jsonData = pm.response.json();
-    pm.environment.set("user_token", jsonData.token);
-}
-```
-
----
-
-## 🗄️ XV. ADATBÁZIS TERV
+## 🗄️ XIV. ADATBÁZIS TERV
 
 ### Táblák és Kapcsolatok
 
@@ -2019,60 +1860,6 @@ http://localhost/Termekertekelesek/Termekertekelesek/public/api
    ```bash
    composer require elasticsearch/elasticsearch
    ```
-
----
-
-## 🎓 XIX. TANULÁSI FORRÁSOK
-
-### Laravel Hivatalos Dokumentáció
-- 📘 [Laravel 12 Docs](https://laravel.com/docs/12.x)
-- 🔐 [Sanctum Docs](https://laravel.com/docs/12.x/sanctum)
-- 🧪 [Testing Docs](https://laravel.com/docs/12.x/testing)
-
-### Ajánlott YouTube Csatornák
-- **Traversy Media** - Laravel alapok
-- **The Net Ninja** - Laravel REST API
-- **Laracasts** - Haladó Laravel
-
-### Postman Dokumentáció
-- 📮 [Postman Learning](https://learning.postman.com/)
-- 🧪 [API Testing Guide](https://www.postman.com/api-testing/)
-
----
-
-## 📞 XX. SUPPORT & TROUBLESHOOTING
-
-### Log Fájlok
-
-```bash
-# Laravel log
-storage/logs/laravel.log
-
-# Apache error log (XAMPP)
-c:\xampp\apache\logs\error.log
-
-# MySQL error log (XAMPP)
-c:\xampp\mysql\data\mysql_error.log
-```
-
-### Debug Mode Bekapcsolás
-
-**.env:**
-```env
-APP_DEBUG=true
-LOG_LEVEL=debug
-```
-
-### SQL Query Logging
-
-**Ideiglenes debug:**
-```php
-\DB::enableQueryLog();
-// ... művelet
-dd(\DB::getQueryLog());
-```
-
----
 
 **🎉 PROJEKT KÉSZ! 🎉**
 
