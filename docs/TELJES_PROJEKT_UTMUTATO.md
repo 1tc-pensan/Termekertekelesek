@@ -57,17 +57,6 @@ Created project in C:\xampp\htdocs\Termekertekelesek
 2. Új adatbázis: `termekertekelesek`
 3. Karakter készlet: `utf8mb4_unicode_ci`
 
-**VAGY konzolon keresztül:**
-
-```bash
-# MySQL konzol megnyitása
-mysql -u root -p
-
-# Adatbázis létrehozása
-CREATE DATABASE termekertekelesek CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
-# Kilépés
-exit;
 ```
 
 ### 2.2 .env Fájl Konfigurálása
