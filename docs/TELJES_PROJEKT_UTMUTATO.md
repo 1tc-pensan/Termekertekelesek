@@ -1116,7 +1116,8 @@ php artisan test --filter=AuthTest
 
 **Várt kimenet:**
 
-![PHPUnit Teszt Eredmények](https://i.imgur.com/YourImageURL.png)
+<img width="705" height="251" alt="image" src="https://github.com/user-attachments/assets/cf77fdc5-ffec-4bbe-8286-9e69f96b771b" />
+
 
 ```
    PASS  Tests\Feature\ReviewTest
