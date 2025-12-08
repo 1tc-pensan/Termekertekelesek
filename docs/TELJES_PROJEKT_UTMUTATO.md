@@ -1119,21 +1119,6 @@ php artisan test --filter=AuthTest
 <img width="705" height="251" alt="image" src="https://github.com/user-attachments/assets/cf77fdc5-ffec-4bbe-8286-9e69f96b771b" />
 
 
-```
-   PASS  Tests\Feature\ReviewTest
-  ✓ authenticated user can list reviews
-  ✓ unauthenticated user cannot list reviews
-  ✓ authenticated user can create review
-  ✓ unauthenticated user cannot create review
-  ✓ user can update review
-  ✓ user can delete review
-  ✓ authenticated user can get product reviews
-  ✓ review rating must be between 1 and 5
-  ✓ review requires rating
-
-  Tests:    36 passed (223 assertions)
-  Duration: 1.23s
-```
 
 ---
 
