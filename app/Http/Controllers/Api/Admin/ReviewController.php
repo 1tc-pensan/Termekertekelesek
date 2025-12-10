@@ -52,6 +52,26 @@ class ReviewController extends Controller
     {
         $review = Reviews::findOrFail($id);
         $review->delete();
-        return response()->json(null, 204);
+        return response()->json(['message' => 'Review soft deleted successfully'], 200);
+    }
+
+    public function trashed()
+    {
+        $reviews = Reviews::onlyTrashed()->with(['user', 'product'])->paginate(20);
+        return response()->json($reviews);
+    }
+
+    public function restore(string $id)
+    {
+        $review = Reviews::withTrashed()->findOrFail($id);
+        $review->restore();
+        return response()->json(['message' => 'Review restored successfully', 'review' => $review->load(['user', 'product'])], 200);
+    }
+
+    public function forceDestroy(string $id)
+    {
+        $review = Reviews::withTrashed()->findOrFail($id);
+        $review->forceDelete();
+        return response()->json(['message' => 'Review permanently deleted'], 200);
     }
 }

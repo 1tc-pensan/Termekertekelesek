@@ -48,6 +48,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('reviews/{id}', [ReviewController::class, 'update']);
     Route::patch('reviews/{id}', [ReviewController::class, 'update']);
     Route::delete('reviews/{id}', [ReviewController::class, 'destroy']);
+    
+    // Soft Delete műveletek Reviews-hoz (autentikált felhasználók)
+    Route::get('reviews/trashed', [ReviewController::class, 'trashed']);
+    Route::post('reviews/{id}/restore', [ReviewController::class, 'restore']);
 
     // ==========================================
     // ADMIN VÉGPONTOK (Admin Only)
@@ -57,6 +61,15 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('users', AdminUserController::class);
         Route::apiResource('products', AdminProductController::class);
         Route::apiResource('reviews', AdminReviewController::class);
+        
+        // Soft Delete műveletek (csak admin)
+        Route::get('products/trashed', [AdminProductController::class, 'trashed']);
+        Route::post('products/{id}/restore', [AdminProductController::class, 'restore']);
+        Route::delete('products/{id}/force', [AdminProductController::class, 'forceDestroy']);
+        
+        Route::get('reviews/trashed', [AdminReviewController::class, 'trashed']);
+        Route::post('reviews/{id}/restore', [AdminReviewController::class, 'restore']);
+        Route::delete('reviews/{id}/force', [AdminReviewController::class, 'forceDestroy']);
     });
 
     // Products - írás/módosítás/törlés (CSAK admin)
@@ -65,5 +78,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('products/{id}', [ProductController::class, 'update']);
         Route::patch('products/{id}', [ProductController::class, 'update']);
         Route::delete('products/{id}', [ProductController::class, 'destroy']);
+        
+        // Soft Delete műveletek Products-hoz
+        Route::get('products/trashed', [ProductController::class, 'trashed']);
+        Route::post('products/{id}/restore', [ProductController::class, 'restore']);
+        Route::delete('products/{id}/force', [ProductController::class, 'forceDestroy']);
     });
 });

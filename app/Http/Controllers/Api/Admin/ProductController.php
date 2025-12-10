@@ -50,6 +50,26 @@ class ProductController extends Controller
     {
         $product = Products::findOrFail($id);
         $product->delete();
-        return response()->json(null, 204);
+        return response()->json(['message' => 'Product soft deleted successfully'], 200);
+    }
+
+    public function trashed()
+    {
+        $products = Products::onlyTrashed()->with('reviews')->paginate(20);
+        return response()->json($products);
+    }
+
+    public function restore(string $id)
+    {
+        $product = Products::withTrashed()->findOrFail($id);
+        $product->restore();
+        return response()->json(['message' => 'Product restored successfully', 'product' => $product], 200);
+    }
+
+    public function forceDestroy(string $id)
+    {
+        $product = Products::withTrashed()->findOrFail($id);
+        $product->forceDelete();
+        return response()->json(['message' => 'Product permanently deleted'], 200);
     }
 }

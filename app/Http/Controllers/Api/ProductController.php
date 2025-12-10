@@ -65,6 +65,35 @@ class ProductController extends Controller
     {
         $product = Products::findOrFail($id);
         $product->delete();
-        return response()->json(null, 204);
+        return response()->json(['message' => 'Product soft deleted successfully'], 200);
+    }
+
+    /**
+     * Display a listing of trashed products.
+     */
+    public function trashed()
+    {
+        $products = Products::onlyTrashed()->get();
+        return response()->json($products);
+    }
+
+    /**
+     * Restore a soft deleted product.
+     */
+    public function restore(string $id)
+    {
+        $product = Products::withTrashed()->findOrFail($id);
+        $product->restore();
+        return response()->json(['message' => 'Product restored successfully', 'product' => $product], 200);
+    }
+
+    /**
+     * Permanently delete a product.
+     */
+    public function forceDestroy(string $id)
+    {
+        $product = Products::withTrashed()->findOrFail($id);
+        $product->forceDelete();
+        return response()->json(['message' => 'Product permanently deleted'], 200);
     }
 }
