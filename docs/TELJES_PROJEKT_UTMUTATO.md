@@ -657,10 +657,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('reviews/{id}', [ReviewController::class, 'update']);
     Route::patch('reviews/{id}', [ReviewController::class, 'update']);
     Route::delete('reviews/{id}', [ReviewController::class, 'destroy']);
-    
-    // Soft Delete műveletek Reviews-hoz (autentikált felhasználók)
-    Route::get('reviews/trashed', [ReviewController::class, 'trashed']);
-    Route::post('reviews/{id}/restore', [ReviewController::class, 'restore']);
 
     // ==========================================
     // ADMIN VÉGPONTOK (Admin Only)
@@ -670,15 +666,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('users', AdminUserController::class);
         Route::apiResource('products', AdminProductController::class);
         Route::apiResource('reviews', AdminReviewController::class);
-        
-        // Soft Delete műveletek (csak admin)
-        Route::get('products/trashed', [AdminProductController::class, 'trashed']);
-        Route::post('products/{id}/restore', [AdminProductController::class, 'restore']);
-        Route::delete('products/{id}/force', [AdminProductController::class, 'forceDestroy']);
-        
-        Route::get('reviews/trashed', [AdminReviewController::class, 'trashed']);
-        Route::post('reviews/{id}/restore', [AdminReviewController::class, 'restore']);
-        Route::delete('reviews/{id}/force', [AdminReviewController::class, 'forceDestroy']);
     });
 
     // Products - írás/módosítás/törlés (CSAK admin)
@@ -687,11 +674,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('products/{id}', [ProductController::class, 'update']);
         Route::patch('products/{id}', [ProductController::class, 'update']);
         Route::delete('products/{id}', [ProductController::class, 'destroy']);
-        
-        // Soft Delete műveletek Products-hoz
-        Route::get('products/trashed', [ProductController::class, 'trashed']);
-        Route::post('products/{id}/restore', [ProductController::class, 'restore']);
-        Route::delete('products/{id}/force', [ProductController::class, 'forceDestroy']);
     });
 });
 ```
@@ -841,31 +823,7 @@ class ProductController extends Controller
         $product = Products::findOrFail($id);
         $product->delete(); // Soft delete
 
-        return response()->json(['message' => 'Product soft deleted successfully'], 200);
-    }
-
-    // Törölt termékek listázása
-    public function trashed()
-    {
-        return Products::onlyTrashed()->get();
-    }
-
-    // Termék végleges törlése
-    public function forceDestroy($id)
-    {
-        $product = Products::withTrashed()->findOrFail($id);
-        $product->forceDelete();
-
-        return response()->json(['message' => 'Product permanently deleted'], 200);
-    }
-
-    // Termék visszaállítása
-    public function restore($id)
-    {
-        $product = Products::withTrashed()->findOrFail($id);
-        $product->restore();
-
-        return response()->json(['message' => 'Product restored successfully', 'product' => $product], 200);
+        return response()->json(['message' => 'Product deleted successfully'], 200);
     }
 }
 ```
@@ -932,31 +890,7 @@ class ReviewController extends Controller
         $review = Reviews::findOrFail($id);
         $review->delete(); // Soft delete
 
-        return response()->json(['message' => 'Review soft deleted successfully'], 200);
-    }
-
-    // Törölt értékelések listázása
-    public function trashed()
-    {
-        return Reviews::onlyTrashed()->with(['user', 'product'])->get();
-    }
-
-    // Értékelés végleges törlése
-    public function forceDestroy($id)
-    {
-        $review = Reviews::withTrashed()->findOrFail($id);
-        $review->forceDelete();
-
-        return response()->json(['message' => 'Review permanently deleted'], 200);
-    }
-
-    // Értékelés visszaállítása
-    public function restore($id)
-    {
-        $review = Reviews::withTrashed()->findOrFail($id);
-        $review->restore();
-
-        return response()->json(['message' => 'Review restored successfully', 'review' => $review->load(['user', 'product'])], 200);
+        return response()->json(['message' => 'Review deleted successfully'], 200);
     }
 }
 ```
@@ -1710,26 +1644,15 @@ http://localhost/Termekertekelesek/Termekertekelesek/public/api
 | `/products/{id}` | GET | ✅ | ❌ | Egy termék |
 | `/products` | POST | ✅ | ✅ | Termék létrehozása |
 | `/products/{id}` | PUT | ✅ | ✅ | Termék módosítása |
-| `/products/{id}` | DELETE | ✅ | ✅ | Termék soft delete |
-| `/products/trashed` | GET | ✅ | ✅ | Törölt termékek |
-| `/products/{id}/restore` | POST | ✅ | ✅ | Termék visszaállítása |
-| `/products/{id}/force` | DELETE | ✅ | ✅ | Termék végleges törlése |
+| `/products/{id}` | DELETE | ✅ | ✅ | Termék törlése (soft delete) |
 | `/reviews` | GET | ✅ | ❌ | Értékelések lista |
 | `/reviews/{id}` | GET | ✅ | ❌ | Egy értékelés |
 | `/reviews` | POST | ✅ | ❌ | Értékelés létrehozása |
 | `/reviews/{id}` | PUT | ✅ | ❌ | Értékelés módosítása |
-| `/reviews/{id}` | DELETE | ✅ | ❌ | Értékelés soft delete |
-| `/reviews/trashed` | GET | ✅ | ❌ | Törölt értékelések |
-| `/reviews/{id}/restore` | POST | ✅ | ❌ | Értékelés visszaállítása |
+| `/reviews/{id}` | DELETE | ✅ | ❌ | Értékelés törlése (soft delete) |
 | `/admin/users` | GET | ✅ | ✅ | Admin: Users |
 | `/admin/products` | GET | ✅ | ✅ | Admin: Products |
 | `/admin/reviews` | GET | ✅ | ✅ | Admin: Reviews |
-| `/admin/products/trashed` | GET | ✅ | ✅ | Admin: Törölt termékek |
-| `/admin/products/{id}/restore` | POST | ✅ | ✅ | Admin: Termék visszaállítása |
-| `/admin/products/{id}/force` | DELETE | ✅ | ✅ | Admin: Végleges törlés |
-| `/admin/reviews/trashed` | GET | ✅ | ✅ | Admin: Törölt értékelések |
-| `/admin/reviews/{id}/restore` | POST | ✅ | ✅ | Admin: Értékelés visszaállítása |
-| `/admin/reviews/{id}/force` | DELETE | ✅ | ✅ | Admin: Végleges törlés |
 
 **Jelmagyarázat:**
 - ✅ = Szükséges
@@ -1818,10 +1741,8 @@ http://localhost/Termekertekelesek/Termekertekelesek/public/api
 3. Teszteld a végpontokat (beleértve a soft delete műveleteket)
 4. Futtasd a teszteket: `php artisan test`
 
-**Soft Delete Tesztelési Lépések:**
-1. Törlj egy terméket → `DELETE /api/products/1`
-2. Listázd a törölt termékeket → `GET /api/products/trashed`
-3. Állítsd vissza a terméket → `POST /api/products/1/restore`
-4. Töröld véglegesen → `DELETE /api/products/1/force`
+**Soft Delete:**
+- Törölt rekordok nem kerülnek fizikailag törlésre, csak `deleted_at` timestamp-et kapnak
+- Adatbázisban megmaradnak, de az API nem listázza őket
 
 **Élvezd a kódolást! 🚀**
