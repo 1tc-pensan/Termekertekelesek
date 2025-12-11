@@ -614,9 +614,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\Admin\UserController as AdminUserController;
-use App\Http\Controllers\Api\Admin\ProductController as AdminProductController;
-use App\Http\Controllers\Api\Admin\ReviewController as AdminReviewController;
+use App\Http\Controllers\Api\UserController;
 
 // ==========================================
 // NYILVÁNOS VÉGPONTOK (Public - NO AUTH)
@@ -638,43 +636,34 @@ Route::middleware('auth:sanctum')->group(function () {
         return $request->user();
     });
 
-    // Products - olvasás (autentikált felhasználók)
+    // Products (jogosultság-ellenőrzés a controllerben)
     Route::get('products', [ProductController::class, 'index']);
     Route::get('products/{id}', [ProductController::class, 'show']);
+    Route::post('products', [ProductController::class, 'store']); // csak admin
+    Route::put('products/{id}', [ProductController::class, 'update']); // csak admin
+    Route::patch('products/{id}', [ProductController::class, 'update']); // csak admin
+    Route::delete('products/{id}', [ProductController::class, 'destroy']); // csak admin
     
-    // Termékhez tartozó értékelések (autentikált felhasználók)
+    // Termékhez tartozó értékelések
     Route::get('products/{id}/reviews', function ($id) {
         $product = \App\Models\Products::with('reviews.user')->findOrFail($id);
         return response()->json($product->reviews);
     });
 
-    // Reviews - olvasás (autentikált felhasználók)
+    // Reviews (jogosultság-ellenőrzés a controllerben)
     Route::get('reviews', [ReviewController::class, 'index']);
     Route::get('reviews/{id}', [ReviewController::class, 'show']);
-
-    // Reviews - írás/módosítás/törlés (autentikált felhasználók)
     Route::post('reviews', [ReviewController::class, 'store']);
     Route::put('reviews/{id}', [ReviewController::class, 'update']);
     Route::patch('reviews/{id}', [ReviewController::class, 'update']);
     Route::delete('reviews/{id}', [ReviewController::class, 'destroy']);
 
-    // ==========================================
-    // ADMIN VÉGPONTOK (Admin Only)
-    // ==========================================
-    
-    Route::prefix('admin')->middleware('admin')->group(function () {
-        Route::apiResource('users', AdminUserController::class);
-        Route::apiResource('products', AdminProductController::class);
-        Route::apiResource('reviews', AdminReviewController::class);
-    });
-
-    // Products - írás/módosítás/törlés (CSAK admin)
-    Route::middleware('admin')->group(function () {
-        Route::post('products', [ProductController::class, 'store']);
-        Route::put('products/{id}', [ProductController::class, 'update']);
-        Route::patch('products/{id}', [ProductController::class, 'update']);
-        Route::delete('products/{id}', [ProductController::class, 'destroy']);
-    });
+    // Users (csak admin)
+    Route::get('users', [UserController::class, 'index']);
+    Route::get('users/{id}', [UserController::class, 'show']);
+    Route::post('users', [UserController::class, 'store']);
+    Route::put('users/{id}', [UserController::class, 'update']);
+    Route::delete('users/{id}', [UserController::class, 'destroy']);
 });
 ```
 
@@ -782,16 +771,29 @@ class ProductController extends Controller
 {
     public function index()
     {
+        if (auth()->user()->is_admin) {
+            // Admin látja az összeset kapcsolatokkal
+            return Products::with('reviews')->paginate(20);
+        }
+        // User látja a sima listát
         return Products::all();
     }
 
     public function show($id)
     {
+        if (auth()->user()->is_admin) {
+            return Products::with('reviews')->findOrFail($id);
+        }
         return Products::findOrFail($id);
     }
 
     public function store(Request $request)
     {
+        // Csak admin
+        if (!auth()->user()->is_admin) {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -805,6 +807,11 @@ class ProductController extends Controller
 
     public function update(Request $request, $id)
     {
+        // Csak admin
+        if (!auth()->user()->is_admin) {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
         $product = Products::findOrFail($id);
 
         $validated = $request->validate([
@@ -820,6 +827,11 @@ class ProductController extends Controller
 
     public function destroy($id)
     {
+        // Csak admin
+        if (!auth()->user()->is_admin) {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
         $product = Products::findOrFail($id);
         $product->delete(); // Soft delete
 
@@ -849,6 +861,11 @@ class ReviewController extends Controller
 {
     public function index()
     {
+        if (auth()->user()->is_admin) {
+            // Admin látja az összeset lapozással
+            return Reviews::with(['user', 'product'])->paginate(20);
+        }
+        // User látja az összeset
         return Reviews::with(['user', 'product'])->get();
     }
 
@@ -875,6 +892,11 @@ class ReviewController extends Controller
     {
         $review = Reviews::findOrFail($id);
 
+        // User csak saját értékelését módosíthatja, admin bármelyiket
+        if (!auth()->user()->is_admin && $review->user_id !== auth()->id()) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
         $validated = $request->validate([
             'rating' => 'sometimes|required|integer|min:1|max:5',
             'comment' => 'nullable|string',
@@ -888,6 +910,12 @@ class ReviewController extends Controller
     public function destroy($id)
     {
         $review = Reviews::findOrFail($id);
+
+        // User csak saját értékelését törölheti, admin bármelyiket
+        if (!auth()->user()->is_admin && $review->user_id !== auth()->id()) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
         $review->delete(); // Soft delete
 
         return response()->json(['message' => 'Review deleted successfully'], 200);
@@ -895,20 +923,18 @@ class ReviewController extends Controller
 }
 ```
 
-### 8.4 Admin Controllers
+### 8.4 User Controller
 
 ```bash
-php artisan make:controller Api/Admin/UserController --api
-php artisan make:controller Api/Admin/ProductController --api
-php artisan make:controller Api/Admin/ReviewController --api
+php artisan make:controller Api/UserController
 ```
 
-**Fájl:** `app/Http/Controllers/Api/Admin/UserController.php`
+**Fájl:** `app/Http/Controllers/Api/UserController.php`
 
 ```php
 <?php
 
-namespace App\Http\Controllers\Api\Admin;
+namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
@@ -919,16 +945,31 @@ class UserController extends Controller
 {
     public function index()
     {
+        // Csak admin
+        if (!auth()->user()->is_admin) {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
         return User::paginate(20);
     }
 
     public function show($id)
     {
+        // Csak admin
+        if (!auth()->user()->is_admin) {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
         return User::findOrFail($id);
     }
 
     public function store(Request $request)
     {
+        // Csak admin
+        if (!auth()->user()->is_admin) {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
@@ -945,6 +986,11 @@ class UserController extends Controller
 
     public function update(Request $request, $id)
     {
+        // Csak admin
+        if (!auth()->user()->is_admin) {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
         $user = User::findOrFail($id);
 
         $validated = $request->validate([
@@ -965,6 +1011,11 @@ class UserController extends Controller
 
     public function destroy($id)
     {
+        // Csak admin
+        if (!auth()->user()->is_admin) {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
         $user = User::findOrFail($id);
         $user->delete();
 
@@ -973,127 +1024,7 @@ class UserController extends Controller
 }
 ```
 
-**Fájl:** `app/Http/Controllers/Api/Admin/ProductController.php`
 
-```php
-<?php
-
-namespace App\Http\Controllers\Api\Admin;
-
-use App\Http\Controllers\Controller;
-use App\Models\Products;
-use Illuminate\Http\Request;
-
-class ProductController extends Controller
-{
-    public function index()
-    {
-        return Products::with('reviews')->paginate(20);
-    }
-
-    public function show($id)
-    {
-        return Products::with('reviews')->findOrFail($id);
-    }
-
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'price' => 'required|numeric',
-        ]);
-
-        $product = Products::create($validated);
-
-        return response()->json($product, 201);
-    }
-
-    public function update(Request $request, $id)
-    {
-        $product = Products::findOrFail($id);
-
-        $validated = $request->validate([
-            'name' => 'sometimes|required|string|max:255',
-            'description' => 'nullable|string',
-            'price' => 'sometimes|required|numeric',
-        ]);
-
-        $product->update($validated);
-
-        return response()->json($product);
-    }
-
-    public function destroy($id)
-    {
-        $product = Products::findOrFail($id);
-        $product->delete(); // Soft delete
-
-        return response()->json(['message' => 'Product soft deleted successfully'], 200);
-    }
-}
-```
-
-**Fájl:** `app/Http/Controllers/Api/Admin/ReviewController.php`
-
-```php
-<?php
-
-namespace App\Http\Controllers\Api\Admin;
-
-use App\Http\Controllers\Controller;
-use App\Models\Reviews;
-use Illuminate\Http\Request;
-
-class ReviewController extends Controller
-{
-    public function index()
-    {
-        return Reviews::with(['user', 'product'])->paginate(20);
-    }
-
-    public function show($id)
-    {
-        return Reviews::with(['user', 'product'])->findOrFail($id);
-    }
-
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'product_id' => 'required|exists:products,id',
-            'rating' => 'required|integer|min:1|max:5',
-            'comment' => 'nullable|string',
-        ]);
-
-        $review = Reviews::create($validated);
-
-        return response()->json($review->load(['user', 'product']), 201);
-    }
-
-    public function update(Request $request, $id)
-    {
-        $review = Reviews::findOrFail($id);
-
-        $validated = $request->validate([
-            'rating' => 'sometimes|required|integer|min:1|max:5',
-            'comment' => 'nullable|string',
-        ]);
-
-        $review->update($validated);
-
-        return response()->json($review->load(['user', 'product']));
-    }
-
-    public function destroy($id)
-    {
-        $review = Reviews::findOrFail($id);
-        $review->delete(); // Soft delete
-
-        return response()->json(['message' => 'Review soft deleted successfully'], 200);
-    }
-}
-```
 
 ---
 
@@ -1566,10 +1497,7 @@ Termekertekelesek/
 │   │   │       ├── AuthController.php
 │   │   │       ├── ProductController.php
 │   │   │       ├── ReviewController.php
-│   │   │       └── Admin/
-│   │   │           ├── UserController.php
-│   │   │           ├── ProductController.php
-│   │   │           └── ReviewController.php
+│   │   │       └── UserController.php
 │   │   └── Middleware/
 │   │       └── IsAdmin.php
 │   └── Models/
@@ -1648,11 +1576,13 @@ http://localhost/Termekertekelesek/Termekertekelesek/public/api
 | `/reviews` | GET | ✅ | ❌ | Értékelések lista |
 | `/reviews/{id}` | GET | ✅ | ❌ | Egy értékelés |
 | `/reviews` | POST | ✅ | ❌ | Értékelés létrehozása |
-| `/reviews/{id}` | PUT | ✅ | ❌ | Értékelés módosítása |
-| `/reviews/{id}` | DELETE | ✅ | ❌ | Értékelés törlése (soft delete) |
-| `/admin/users` | GET | ✅ | ✅ | Admin: Users |
-| `/admin/products` | GET | ✅ | ✅ | Admin: Products |
-| `/admin/reviews` | GET | ✅ | ✅ | Admin: Reviews |
+| `/reviews/{id}` | PUT | ✅ | ❌ | Értékelés módosítása (saját vagy admin) |
+| `/reviews/{id}` | DELETE | ✅ | ❌ | Értékelés törlése (saját vagy admin) |
+| `/users` | GET | ✅ | ✅ | Felhasználók listája |
+| `/users/{id}` | GET | ✅ | ✅ | Egy felhasználó |
+| `/users` | POST | ✅ | ✅ | Felhasználó létrehozása |
+| `/users/{id}` | PUT | ✅ | ✅ | Felhasználó módosítása |
+| `/users/{id}` | DELETE | ✅ | ✅ | Felhasználó törlése |
 
 **Jelmagyarázat:**
 - ✅ = Szükséges
